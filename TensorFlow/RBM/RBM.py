@@ -150,9 +150,9 @@ class RBM:
 
     def modify_data_type(self, x):
         if type(x) == list or type(x) == np.ndarray:
-            x = tf.convert_to_tensor(x)
+            x = tf.convert_to_tensor(x, dtype=dtypes.float64)
         elif type(x) == pd.DataFrame or type(x) == pd.Series:
-            x = tf.convert_to_tensor(x.values)
+            x = tf.convert_to_tensor(x.values, dtype=dtypes.float64)
         else:
             raise Exception('Error: type of data must be list or numpy array or pandas DataFrame or Series!')
         return x
