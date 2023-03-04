@@ -77,6 +77,9 @@ plt.show()
 #### Example weights for minist dataset 
 <img src="./image/weights.png"/>
 
+## License
+This repository is released under [Apache License V2](http://www.apache.org/licenses/LICENSE-2.0). To develop, publication and use it, please follow the terms of this license. 
+
 ## Citation
 Please cite this paper if you use this code in your research project.
 
