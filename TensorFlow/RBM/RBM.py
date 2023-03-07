@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+from tensorflow.python.framework.ops import EagerTensor
 from tensorflow.python.framework import dtypes
 from time import time
 
@@ -20,7 +21,7 @@ class RBM:
         self.k = k
         self.lr = lr
 
-        self.training_set = None
+        self.no_data_value = -1
         self.total_losses = {'train': [], 'validation': []}
         self.loss_validation = 0
 
@@ -62,9 +63,9 @@ class RBM:
         self.b += self.lr * tf.reduce_sum(v0 - vk, axis=0)
         self.a += self.lr * tf.reduce_sum(ph0 - phk, axis=0)
 
-    def fit(self, x=None, batch_size=128, epoch=100, validation_data=None, verbose=0):
+    def fit(self, x=None, batch_size=128, epoch=100, validation_data=None, verbose=0, no_data_value=-1):
         x = self.modify_data_type(x)
-        self.training_set = x
+        self.no_data_value = no_data_value
 
         for e in range(epoch):
             s_t = time()
@@ -77,7 +78,8 @@ class RBM:
                 for k in range(self.k):
                     vk = self.gibbs_sampling(vk)
 
-                    v0, vk = self.logical_assign(vk, v0, v0 < 0)
+                    logical_condition = v0 == self.no_data_value
+                    v0, vk = self.logical_assign(vk, v0, logical_condition) # in recommender systems, the -1 meaning is that they are empty.
 
                 phk, _ = self.visible_to_hidden_sampling(vk)
                 self.train(v0, vk, ph0, phk)
@@ -117,7 +119,7 @@ class RBM:
         s_t = time()
         v = x
         vt = x
-        if len(vt[vt >= 0]) > 0:
+        if len(vt[vt != self.no_data_value]) > 0:
             v = self.gibbs_sampling(v)
             loss = self.batch_loss(vt, v)
             predicted = v.numpy().tolist()
@@ -146,13 +148,15 @@ class RBM:
         return tf.nn.relu(tf.sign(p - tf.random.uniform(p.shape, dtype=dtypes.float64)))
 
     def batch_loss(self, v0, vk):
-        return tf.reduce_mean(tf.abs(v0[v0 >= 0] - vk[v0 >= 0]))
+        return tf.reduce_mean(tf.abs(v0[v0 != self.no_data_value] - vk[v0 != self.no_data_value]))
 
     def modify_data_type(self, x):
         if type(x) == list or type(x) == np.ndarray:
             x = tf.convert_to_tensor(x, dtype=dtypes.float64)
         elif type(x) == pd.DataFrame or type(x) == pd.Series:
             x = tf.convert_to_tensor(x.values, dtype=dtypes.float64)
+        elif type(x) == EagerTensor:
+            x = x
         else:
             raise Exception('Error: type of data must be list or numpy array or pandas DataFrame or Series!')
         return x

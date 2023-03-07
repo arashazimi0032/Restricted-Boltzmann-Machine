@@ -19,7 +19,7 @@ class RBM:
         self.k = k
         self.lr = lr
 
-        self.training_set = None
+        self.no_data_value = -1
         self.total_losses = {'train': [], 'validation': []}
         self.loss_validation = 0
 
@@ -61,9 +61,9 @@ class RBM:
         self.b += self.lr * torch.sum((v0 - vk), 0)
         self.a += self.lr * torch.sum((ph0 - phk), 0)
 
-    def fit(self, x=None, batch_size=128, epoch=100, validation_data=None, verbose=0):
+    def fit(self, x=None, batch_size=128, epoch=100, validation_data=None, verbose=0, no_data_value=-1):
         x = self.modify_data_type(x)
-        self.training_set = x
+        self.no_data_value = no_data_value
 
         for e in range(epoch):
             s_t = time()
@@ -75,7 +75,7 @@ class RBM:
                 ph0, _ = self.visible_to_hidden_sampling(v0)
                 for k in range(self.k):
                     vk = self.gibbs_sampling(vk)
-                    vk[v0 < 0] = v0[v0 < 0]  # in recommender systems, the negative meaning is that they are empty.
+                    vk[v0 == self.no_data_value] = v0[v0 == self.no_data_value]  # in recommender systems, the -1 meaning is that they are empty.
 
                 phk, _ = self.visible_to_hidden_sampling(vk)
                 self.train(v0, vk, ph0, phk)
@@ -107,7 +107,7 @@ class RBM:
         s_t = time()
         v = x
         vt = x
-        if len(vt[vt >= 0]) > 0:
+        if len(vt[vt != self.no_data_value]) > 0:
             v = self.gibbs_sampling(v)
             loss = self.batch_loss(vt, v)
             predicted = v.tolist()
@@ -134,13 +134,15 @@ class RBM:
 
 
     def batch_loss(self, v0, vk):
-        return torch.mean(torch.abs(v0[v0 >= 0] - vk[v0 >= 0]))
+        return torch.mean(torch.abs(v0[v0 != self.no_data_value] - vk[v0 != self.no_data_value]))
 
     def modify_data_type(self, x):
         if type(x) == list or type(x) == np.ndarray:
             x = torch.FloatTensor(x)
         elif type(x) == pd.DataFrame or type(x) == pd.Series:
             x = torch.FloatTensor(x.values)
+        elif type(x) == torch.Tensor:
+            x = x
         else:
             raise Exception('Error: type of data must be list or numpy array or pandas DataFrame or Series!')
         return x
