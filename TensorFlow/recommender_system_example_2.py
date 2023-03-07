@@ -33,7 +33,7 @@ training_set = convert_to_binary_rating(convert(training_set))
 
 rbm = RBM(nv=n_movies, nh=64, k=20, lr=0.005)
 
-rbm.fit(training_set, batch_size=256, epoch=20, validation_data=training_set, verbose=1)
+rbm.fit(training_set, batch_size=256, epoch=20, validation_data=training_set, verbose=1, no_data_value=-1)
 
 predicted = rbm.predict(training_set, verbose=1)
 
